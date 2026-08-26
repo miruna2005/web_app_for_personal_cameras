@@ -6,6 +6,6 @@ inregistrari/
 *.mp4
 events.json
 config.json
-
+sftp.json
 # Fisiere de sistem/cache
 __pycache__/
