@@ -1,0 +1,11 @@
+# Medii virtuale Python
+.venv/
+
+# Fisiere video si date sensibile
+inregistrari/
+*.mp4
+events.json
+config.json
+
+# Fisiere de sistem/cache
+__pycache__/
