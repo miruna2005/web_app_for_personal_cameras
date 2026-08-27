@@ -7,6 +7,7 @@ import glob
 from datetime import datetime
 from threading import Thread,Lock
 from proiectcamere import CamereStream
+from storage import get_cale_inregistrari
 def incarca_configurare(cale="config.json"):
     try:
         with open(cale, "r") as f:
@@ -20,20 +21,6 @@ def incarca_configurare(cale="config.json"):
 
 config = incarca_configurare()
 json_lock=Lock()
-def get_cale_inregistrari():
-    baza_media=config["stocare"]["baza_media_usb"]
-    nume_foldere=config["stocare"]["nume_foldere_salvate"]
-    if os.path.exists(baza_media):
-        dispozitive=[os.path.join(baza_media,d)for d in os.listdir(baza_media)
-                    if os.path.isdir(os.path.join(baza_media,d))]
-        if dispozitive:
-            cale_stick=dispozitive[0]
-            cale_folder=os.path.join(cale_stick,"inregistrari")
-            os.makedirs(cale_folder,exist_ok=True)
-            return cale_folder
-    cale_fallback="inregistrari"
-    os.makedirs(nume_foldere,exist_ok=True)
-    return nume_foldere
 def verifica_curata_spatiu(director):
     limita_gb=config["stocare"]["limita_spatiu_gb"]
     zile_pastrate=config["stocare"]["zile_pastrate_video"]
@@ -110,7 +97,13 @@ def proceseaza_camere(nume_camera,stream):
         contururi,_=cv2.findContours(masca,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
         miscare_detectata=any(cv2.contourArea(c)>setari_sens["aria_minima_contur"] for c in contururi)
         if miscare_detectata and not inregistrare_activa:
-            cale_folder=get_cale_inregistrari()
+            cale_folder,_=get_cale_inregistrari()
+            try:
+                os.makedirs(cale_folder, exist_ok=True)
+            except OSError as e:
+                print(f"Nu pot scrie în {cale_folder}: {e}")
+                cale_folder = config["stocare"]["nume_folder"]
+                os.makedirs(cale_folder, exist_ok=True)
             verifica_curata_spatiu(cale_folder)
             print(f"[{nume_camera}] Miscare Detectata")
             inregistrare_activa=True

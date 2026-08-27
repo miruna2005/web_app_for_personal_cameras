@@ -7,7 +7,7 @@ class CamereStream:
         self.stream=cv2.VideoCapture(sursa)
         (self.succes,self.cadru)=self.stream.read()
         self.oprit=False
-        self.thread=Thread(target=self._acualizeaza,args=())
+        self.thread=Thread(target=self._actualizeaza,args=())
         self.thread.daemon=True
         self.thread.start()
     def _actualizeaza(self):
@@ -31,7 +31,7 @@ class CamereStream:
             esecuri=0
             self.succes=succes
             self.cadru=cadru.copy()
-    def citeste_cadru(self)
+    def citeste_cadru(self):
         return self.cadru.copy() if self.cadru is not None else None
     def opreste(self):
         self.oprit=True
