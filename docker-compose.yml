@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  app-camere:
+    build: .
+    container_name: server_camre_web
+    restart: always
+    volumes:
+      -.:/app
+      -/media/miruna:/media/miruna
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok_tunel
+    restart: always
+    command:
+      - "http"
+      - "--authtoken=${NGROK_AUTHTOKEN}"
+      - "--domain=${NGROK_DOMAIN}"
+      - "http://server_camere_web:5000"
+    depends_on:
+      - app-camere
