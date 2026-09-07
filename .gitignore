@@ -9,3 +9,4 @@ config.json
 sftp.json
 # Fisiere de sistem/cache
 __pycache__/
+.env

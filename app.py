@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask,jsonfy,render_template,send_from_directory
+from flask import Flask,jsonify,render_template,send_from_directory
 from storage import get_cale_inregistrari,config
 app=Flask(__name__)
 @app.route("/")
@@ -15,26 +15,28 @@ def get_status():
     else:
         mesaj="Stick deconectat.Stocare pe memoria interna!"
         stare="!"
-    return jsonfy({
+    return jsonify({
         "stocare_usb":e_pe_usb,
         "mesaj":mesaj,
         "stare":stare
     })
-@app.route("api/events")
+@app.route("/api/events")
 def get_events():
     cale_folder,_=get_cale_inregistrari()
     cale_json=os.path.join(cale_folder,config["stocare"]["fisier_evenimente"])
     if not os.path.exists(cale_json):
-        return jsonfy([])
+        return jsonify([])
     try:
         with open(cale_json,"r") as f:
             evenimente=json.load(f)
             evenimente.reverse()
-            return jsonfy(evenimente)
+            return jsonify(evenimente)
     except Exception as e:
         print(f"nu s a putut citi events.json",flush=True)
-        return jsonfy([])
+        return jsonify([])
 @app.route("/video/<path:nume_fisier>")
 def get_video(nume_fisier):
     cale_folder,_=get_cale_inregistrari()
     return send_from_directory(cale_folder,nume_fisier,mimetype='video/mp4')
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
