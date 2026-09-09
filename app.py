@@ -38,5 +38,16 @@ def get_events():
 def get_video(nume_fisier):
     cale_folder,_=get_cale_inregistrari()
     return send_from_directory(cale_folder,nume_fisier,mimetype='video/mp4')
+@app.route("/api/cameras")
+def get_cameras():
+    camere_list = []
+    for id_cam, detalii in config.get('camere', {}).items():
+        camere_list.append({
+            'id': id_cam,
+            'nume': id_cam.replace('.', ' ').upper(),
+            'activa': detalii.get('activa', False)
+        })
+        
+    return jsonify(camere_list)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

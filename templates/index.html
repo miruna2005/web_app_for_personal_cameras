@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CamereCurte - Monitorizare</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-cyan: #06b6d4;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 65px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            color: var(--text-main);
+        }
+        .nav-tabs {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-tab {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-tab.active {
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.1);
+            border-bottom: 2px solid var(--accent-cyan);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-badge {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--accent-green);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* Secțiunea de Camere Live */
+        .view-section {
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 16px;
+        }
+
+        .view-section.active {
+            display: grid;
+        }
+
+        .camera-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 260px;
+        }
+
+        .camera-header {
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .camera-screen {
+            flex: 1;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .events-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .events-table th, .events-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .events-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .events-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <div class="logo">🛡️ CamereCurte</div>
+            <!-- Butoanele stil tab din designul tău -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchView('cameras', this)">
+                    ◉ CAMERE LIVE
+                </button>
+                <button class="nav-tab" onclick="switchView('events', this)">
+                    ❖ EVENIMENTE SALVATE
+                </button>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status-badge" id="storage-status">
+                <div class="status-dot"></div>
+                Verificare stocare...
+            </div>
+            <div id="clock" style="font-size: 0.9rem; color: var(--text-muted);"></div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div id="section-cameras" class="view-section active">
+            <div style="color: var(--text-muted);">Se încarcă camerele...</div>
+        </div>
+        <div id="section-events" class="view-section" style="display: none;">
+            <table class="events-table">
+                <thead>
+                    <tr>
+                        <th>ID Eveniment</th>
+                        <th>Dată & Oră</th>
+                        <th>Cameră</th>
+                        <th>Descriere / Status</th>
+                    </tr>
+                </thead>
+                <tbody id="events-table-body">
+                    <tr>
+                        <td colspan="4" style="color: var(--text-muted); text-align: center;">Se încarcă evenimentele...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        function switchView(viewName, buttonElement) {
+            // Ascundem toate secțiunile
+            document.querySelectorAll('.view-section').forEach(sec => {
+                sec.style.display = 'none';
+                sec.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Activăm secțiunea dorită
+            if (viewName === 'cameras') {
+                const sec = document.getElementById('section-cameras');
+                sec.style.display = 'grid';
+                sec.classList.add('active');
+            } else if (viewName === 'events') {
+                const sec = document.getElementById('section-events');
+                sec.style.display = 'block';
+                sec.classList.add('active');
+                fetchEvents();
+            }
+
+            // Evidențiem butonul apăsat
+            buttonElement.classList.add('active');
+        }
+
+        // Ceasul în timp real
+        function updateClock() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('clock').innerText = `${dateStr} | ${timeStr}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Preluarea camerelor din backend
+        function fetchCameras() {
+            fetch('/api/cameras') 
+                .then(response => response.json())
+                .then(cameras => {
+                    const grid = document.getElementById('section-cameras');
+                    grid.innerHTML = '';
+
+                    cameras.forEach(cam => {
+                        const isLive = cam.activa === true;
+                        const statusColor = isLive ? 'var(--accent-green)' : 'var(--accent-red)';
+                        const statusText = isLive ? '● LIVE' : '✕ INACTIV';
+                        const acum = new Date().toLocaleDateString('ro-RO');
+
+                        const card = document.createElement('div');
+                        card.className = 'camera-card';
+                        card.innerHTML = `
+                            <div class="camera-header">
+                                <span><b>${cam.nume}</b></span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">${acum}</span>
+                                <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span>
+                            </div>
+                            <div class="camera-screen">
+                                ${isLive ? 'Pregătit pentru flux video...' : 'Semnal Pierdut / Inactiv'}
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                })
+                .catch(error => {
+                    console.log("Eroare la preluarea camerelor");
+                });
+        }
+        function fetchEvents() {
+            fetch('/api/events')
+                .then(response => response.json())
+                .then(events => {
+                    const tbody = document.getElementById('events-table-body');
+                    tbody.innerHTML = '';
+
+                    if (events.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nu există evenimente înregistrate momentan.</td></tr>';
+                        return;
+                    }
+
+                    events.forEach(ev => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><b>${ev.id || 'EVT-0000'}</b></td>
+                            <td>${ev.data || 'N/A'}</td>
+                            <td><span style="background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px;">${ev.camera || 'Cameră necunoscută'}</span></td>
+                            <td>${ev.descriere || 'Mișcare detectată'}</td>
+                        `;
+                        tbody.innerHTML += row.outerHTML;
+                    });
+                })
+                .catch(err => {
+                    console.log("Eroare la preluarea evenimentelor");
+                });
+        }
+        setInterval(fetchCameras, 3000);
+        fetchCameras();
+    </script>
+</body>
+</html>
