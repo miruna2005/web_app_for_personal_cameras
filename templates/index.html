@@ -113,8 +113,6 @@
             padding: 20px;
             overflow-y: auto;
         }
-
-        /* Secțiunea de Camere Live */
         .view-section {
             display: none;
             grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
@@ -183,6 +181,33 @@
         .events-table tr:hover {
             background: rgba(255, 255, 255, 0.02);
         }
+        .camera-card {
+            cursor: pointer;
+        }
+        .camera-card:fullscreen {
+            background-color: var(--bg-dark);
+            border: none;
+            height: 100vh;
+            width: 100vw;
+            padding: 20px;
+        }
+        .exit-fullscreen-btn {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(239, 68, 68, 0.8);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 999;
+        }
+        .camera-card:fullscreen .exit-fullscreen-btn {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -235,7 +260,6 @@
 
     <script>
         function switchView(viewName, buttonElement) {
-            // Ascundem toate secțiunile
             document.querySelectorAll('.view-section').forEach(sec => {
                 sec.style.display = 'none';
                 sec.classList.remove('active');
@@ -243,8 +267,6 @@
             document.querySelectorAll('.nav-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-
-            // Activăm secțiunea dorită
             if (viewName === 'cameras') {
                 const sec = document.getElementById('section-cameras');
                 sec.style.display = 'grid';
@@ -255,12 +277,30 @@
                 sec.classList.add('active');
                 fetchEvents();
             }
-
-            // Evidențiem butonul apăsat
             buttonElement.classList.add('active');
         }
+function toggleFullscreen(cardElement) {
+            if (!document.fullscreenElement) {
+                if (cardElement.requestFullscreen) {
+                    cardElement.requestFullscreen();
+                } else if (cardElement.webkitRequestFullscreen) {
+                    cardElement.webkitRequestFullscreen();
+                } else if (cardElement.msRequestFullscreen) {
+                    cardElement.msRequestFullscreen();
+                }
+            }
+        }
 
-        // Ceasul în timp real
+        function exitFullscreen(event) {
+            event.stopPropagation();
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
         function updateClock() {
             const now = new Date();
             const dateStr = now.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -269,8 +309,6 @@
         }
         setInterval(updateClock, 1000);
         updateClock();
-
-        // Preluarea camerelor din backend
         function fetchCameras() {
             fetch('/api/cameras') 
                 .then(response => response.json())
@@ -286,7 +324,11 @@
 
                         const card = document.createElement('div');
                         card.className = 'camera-card';
+                        card.onclick = () => toggleFullscreen(card);
+
                         card.innerHTML = `
+                            <button class="exit-fullscreen-btn" onclick="exitFullscreen(event)">✕ Închide Fullscreen</button>
+                            
                             <div class="camera-header">
                                 <span><b>${cam.nume}</b></span>
                                 <span style="font-size: 0.8rem; color: var(--text-muted);">${acum}</span>
