@@ -1,4 +1,4 @@
 Flask==3.0.2
-opencv-python-headless==4.9.0.80
+opencv-python-headless==4.6.0.66
 gunicorn==21.2.0
 numpy==1.26.4

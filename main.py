@@ -8,6 +8,8 @@ from datetime import datetime
 from threading import Thread,Lock
 from proiectcamere import CamereStream
 from storage import get_cale_inregistrari
+import os
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
 def incarca_configurare(cale="config.json"):
     try:
         with open(cale, "r") as f:
@@ -53,24 +55,29 @@ def verifica_curata_spatiu(director):
                             json.dump(evenimente_valide,f,indent=4)
                     except Exception as e:
                         print(f"Nu s a putut actualiza events.json:{e}")
-def adauga_evenim_json(nume_camera,cale_fisier,cale_folder):
-    cale_json=os.path.join(cale_folder,config["stocare"]["fisier_evenimente"])
+def adauga_evenim_json(nume_camera, cale_fisier, cale_folder):
+    cale_json = os.path.join(cale_folder, config["stocare"]["fisier_evenimente"])
     with json_lock:
-        evenimente=[]
-    if os.path.exists(cale_json):
-        try:
-            with open(cale_json,"r") as f:
-                evenimente=json.load(f)
-        except json.JSONDecodeError:
-                evenimente=[]
-    noul_evenim={
-        "camera":nume_camera,
-        "timestamp":datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "fisier":os.path.basename(cale_fisier)
-    }
+        evenimente = []
+        if os.path.exists(cale_json):
+            try:
+                with open(cale_json, "r") as f:
+                    evenimente = json.load(f)
+            except json.JSONDecodeError:
+                evenimente = []
+                
+        noul_evenim = {
+            "id": f"EVT-{int(time.time())}",
+            "camera": nume_camera,
+            "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "descriere": "Mișcare detectată",
+            "fisier": os.path.basename(cale_fisier) 
+        }
+        evenimente.append(noul_evenim)
+        
+        with open(cale_json, "w") as f:
+            json.dump(evenimente, f, indent=4)
     evenimente.append(noul_evenim)
-    with open(cale_json,"w") as f:
-        json.dump(evenimente,f,indent=4)
 def proceseaza_camere(nume_camera,stream):
     print(f"[{nume_camera}] procesare pornita")
     inregistrare_activa=False
@@ -95,40 +102,51 @@ def proceseaza_camere(nume_camera,stream):
         _, masca=cv2.threshold(masca,setari_sens["threshold_binar"],255,cv2.THRESH_BINARY)
         #cv2... ret 2 parametri prin _, ignora primul
         contururi,_=cv2.findContours(masca,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+        if contururi:
+            arie_max = max(cv2.contourArea(c) for c in contururi)
+            if arie_max > 100: ###################################################
+                print(f"[{nume_camera}] Arie max miscare: {arie_max}")
         miscare_detectata=any(cv2.contourArea(c)>setari_sens["aria_minima_contur"] for c in contururi)
         if miscare_detectata and not inregistrare_activa:
-            cale_folder,_=get_cale_inregistrari()
+            cale_folder, _ = get_cale_inregistrari()
             try:
                 os.makedirs(cale_folder, exist_ok=True)
             except OSError as e:
                 print(f"Nu pot scrie în {cale_folder}: {e}")
                 cale_folder = config["stocare"]["nume_folder"]
                 os.makedirs(cale_folder, exist_ok=True)
+            
             verifica_curata_spatiu(cale_folder)
-            print(f"[{nume_camera}] Miscare Detectata")
-            inregistrare_activa=True
-            sec_fara_miscare=0
-            timp_formatat = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            cale_fisier_curent = os.path.join(cale_folder, f"eveniment_{nume_camera}_{timp_formatat}.mp4") 
+            print(f"[{nume_camera}] Mișcare Detectată - Pornesc înregistrarea.")
+            
+            inregistrare_activa = True
+            sec_fara_miscare = 0
+            timp_formatat = datetime.now().strftime("%Y-%m-%d_%H-%M-S")
+            cale_fisier_curent = os.path.join(cale_folder, f"eveniment_{nume_camera}_{timp_formatat}.webm")
+            
             inaltime, latime, _ = cadru.shape
-            patru_cc=cv2.VideoWriter_fourcc(*'avc1')#avc1 pt a merge cu browserele(posibil sa nu mearga cu opencv de pe pi)
+            patru_cc = cv2.VideoWriter_fourcc(*'vp80')
             video_writer = cv2.VideoWriter(cale_fisier_curent, patru_cc, fps_inreg, (latime, inaltime))
         if inregistrare_activa:
-           video_writer.write(cadru)
-           if miscare_detectata:
-                sec_fara_miscare=0
-           else:
-                sec_fara_miscare+=0.1
-        if inregistrare_activa and not miscare_detectata and sec_fara_miscare>=3.0:
-            print(f"[{nume_camera}]liniste")
-            inregistrare_activa=False
-            video_writer.release()
-            video_writer=None
-            adauga_evenim_json(nume_camera, cale_fisier_curent, os.path.dirname(cale_fisier_curent))
-            durata_procesare=time.time()-time.start
-            pauza_necesara=0.1-durata_procesare
-            if pauza_necesara>0:
-                time.sleep(pauza_necesara)
+            if video_writer is not None:
+                video_writer.write(cadru)
+            
+            if miscare_detectata:
+                sec_fara_miscare = 0
+            else:
+                sec_fara_miscare += 0.1
+            if not miscare_detectata and sec_fara_miscare >= config["video"]["secunde_liniste_stop"]:
+                print(f"[{nume_camera}] Liniște detectată. Închid înregistrarea.", flush=True)
+                inregistrare_activa = False
+                
+                if video_writer is not None:
+                    video_writer.release()
+                    video_writer = None
+                adauga_evenim_json(nume_camera, cale_fisier_curent, os.path.dirname(cale_fisier_curent))
+        durata_procesare = time.time() - timp_start
+        pauza_necesara = (1.0 / config["video"]["fps_inregistrare"]) - durata_procesare
+        if pauza_necesara > 0:
+            time.sleep(pauza_necesara)
 if __name__ == "__main__":
     camere_streamuri = {}
     for nume_cam, detalii_cam in config["camere"].items():

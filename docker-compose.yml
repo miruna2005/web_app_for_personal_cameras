@@ -16,3 +16,13 @@ services:
       - "http://server_camere_web:5000"
     depends_on:
       - app-camere
+  motor_procesare:
+    build: .
+    container_name: motor_procesare_bg
+    restart: always
+    volumes:
+      - .:/app
+      - /media/miruna:/media/miruna
+    command: python main.py
+    environment:
+      - TZ=Europe/Bucharest

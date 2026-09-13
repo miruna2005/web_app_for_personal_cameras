@@ -181,6 +181,13 @@
         .events-table tr:hover {
             background: rgba(255, 255, 255, 0.02);
         }
+        .events-table tbody tr {
+            cursor: pointer;
+        }
+
+        .events-table tr:hover {
+            background: rgba(6, 182, 212, 0.15) !important;
+        }
         .camera-card {
             cursor: pointer;
         }
@@ -324,21 +331,19 @@
             }
             buttonElement.classList.add('active');
         }
-function toggleFullscreen(cardElement) {
-            // Dacă deja este în modul fake-fullscreen, ieșim
+
+        function toggleFullscreen(cardElement) {
             if (cardElement.classList.contains('fake-fullscreen')) {
                 cardElement.classList.remove('fake-fullscreen');
-                document.body.style.overflow = 'auto'; // Repunem scroll-ul paginii
+                document.body.style.overflow = 'auto';
             } else {
-                // Altfel, îl facem fullscreen forțat pe ecran
                 cardElement.classList.add('fake-fullscreen');
-                document.body.style.overflow = 'hidden'; // Oprim scroll-ul paginii în spate
+                document.body.style.overflow = 'hidden';
             }
         }
 
         function exitFullscreen(event) {
             event.stopPropagation();
-            // Găsim cardul părinte care este în fullscreen și îi scoatem clasa
             const activeCard = document.querySelector('.camera-card.fake-fullscreen');
             if (activeCard) {
                 activeCard.classList.remove('fake-fullscreen');
@@ -354,6 +359,7 @@ function toggleFullscreen(cardElement) {
         }
         setInterval(updateClock, 1000);
         updateClock();
+
         function fetchCameras() {
             fetch('/api/cameras') 
                 .then(response => response.json())
@@ -373,15 +379,14 @@ function toggleFullscreen(cardElement) {
 
                         card.innerHTML = `
                             <button class="exit-fullscreen-btn" onclick="exitFullscreen(event)">✕ Închide Fullscreen</button>
-                            
                             <div class="camera-header">
                                 <span><b>${cam.nume}</b></span>
                                 <span style="font-size: 0.8rem; color: var(--text-muted);">${acum}</span>
                                 <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span>
                             </div>
                             <div class="camera-screen">
-    ${isLive ? `<img src="/video_feed/${cam.id}" style="width:100%; height:100%; object-fit:cover;">` : 'Semnal Pierdut / Inactiv'}
-</div>
+                                ${isLive ? `<img src="/video_feed/${cam.id}" style="width:100%; height:100%; object-fit:cover;">` : 'Semnal Pierdut / Inactiv'}
+                            </div>
                         `;
                         grid.appendChild(card);
                     });
@@ -390,6 +395,7 @@ function toggleFullscreen(cardElement) {
                     console.log("Eroare la preluarea camerelor");
                 });
         }
+
         function fetchEvents() {
             fetch('/api/events')
                 .then(response => response.json())
@@ -404,20 +410,63 @@ function toggleFullscreen(cardElement) {
 
                     events.forEach(ev => {
                         const row = document.createElement('tr');
+                        const areVideo = ev.fisier ? true : false;
+                        
+                        if (areVideo) {
+                            row.onclick = () => redaVideo(ev.fisier);
+                        } else {
+                            row.onclick = () => alert("Fișierul video lipsește pentru acest eveniment.");
+                            row.style.cursor = "not-allowed";
+                        }
+
                         row.innerHTML = `
                             <td><b>${ev.id || 'EVT-0000'}</b></td>
                             <td>${ev.data || 'N/A'}</td>
                             <td><span style="background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px;">${ev.camera || 'Cameră necunoscută'}</span></td>
-                            <td>${ev.descriere || 'Mișcare detectată'}</td>
+                            <td>${ev.descriere || 'Mișcare detectată'} ${areVideo ? '<span style="float: right; color: var(--accent-cyan); font-size: 0.8rem;">▶ Redă</span>' : ''}</td>
                         `;
-                        tbody.innerHTML += row.outerHTML;
+                        tbody.appendChild(row);
                     });
                 })
                 .catch(err => {
                     console.log("Eroare la preluarea evenimentelor");
                 });
         }
-        setInterval(fetchCameras, 3000);
+
+        function redaVideo(numeFisier) {
+            let modal = document.getElementById('videoModal');
+            if (!modal) {
+                // Generăm modalul dinamic dacă lipsește în HTML
+                const modalHtml = `
+                    <div id="videoModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 99999; justify-content: center; align-items: center; flex-direction: column;">
+                        <div style="width: 90%; max-width: 700px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; padding: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h3 style="color: var(--text-main); font-size: 1rem;">Redare Înregistrare Eveniment</h3>
+                                <button onclick="inchideVideo()" style="background: var(--accent-red); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">✕ Închide</button>
+                            </div>
+                            <video id="modalVideoPlayer" controls autoplay style="width: 100%; max-height: 70vh; background: #000; border-radius: 4px;"></video>
+                        </div>
+                    </div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                modal = document.getElementById('videoModal');
+            }
+            const player = document.getElementById('modalVideoPlayer');
+            player.src = `/video/${numeFisier}`;
+            modal.style.display = 'flex';
+            player.play();
+        }
+
+        function inchideVideo() {
+            const modal = document.getElementById('videoModal');
+            const player = document.getElementById('modalVideoPlayer');
+            if (player) {
+                player.pause();
+                player.src = '';
+            }
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
         fetchCameras();
     </script>
 </body>

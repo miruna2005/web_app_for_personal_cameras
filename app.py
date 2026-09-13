@@ -38,7 +38,7 @@ def get_events():
 @app.route("/video/<path:nume_fisier>")
 def get_video(nume_fisier):
     cale_folder,_=get_cale_inregistrari()
-    return send_from_directory(cale_folder,nume_fisier,mimetype='video/mp4')
+    return send_from_directory(cale_folder,nume_fisier)
 @app.route("/api/cameras")
 def get_cameras():
     camere_list = []
@@ -53,20 +53,6 @@ def get_cameras():
 def genereaza_cadre(url_stream):
     os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
     cap = cv2.VideoCapture(url_stream, cv2.CAP_FFMPEG)
-    
-    if not cap.isOpened():
-        print("-> EROARE: OpenCV nu a putut deschide deloc streamul!", flush=True)
-        return
-
-    print("-> SUCCES: Stream-ul a fost deschis, încerc să citesc primul cadru...", flush=True)
-    
-    success, frame = cap.read()
-    if not success:
-        print("-> EROARE: S-a deschis conexiunea, dar cap.read() a returnat False (cadru gol)!", flush=True)
-        cap.release()
-        return
-
-    print("-> SUCCES TOTAL: Primul cadru a fost citit cu succes!", flush=True)
     
     while True:
         success, frame = cap.read()
